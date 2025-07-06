@@ -1,0 +1,201 @@
+<!-- admin.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Panel - PS2 Games</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #181818;
+      color: #fff;
+      margin: 0;
+      min-height: 100vh;
+    }
+    .admin-container {
+      background: #222;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      width: 100%;
+      max-width: 700px;
+      margin: 40px auto;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 6px;
+    }
+    button {
+      padding: 10px 18px;
+      background-color: #4fc3f7;
+      color: white;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 6px 2px;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background-color: #039be5;
+    }
+    .game-list-admin {
+      margin-top: 32px;
+    }
+    .game-item {
+      background: #181818;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .game-item-title {
+      font-weight: bold;
+      color: #4fc3f7;
+      flex: 1;
+    }
+    .edit-btn, .delete-btn {
+      background: #ff5555;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 14px;
+      cursor: pointer;
+      font-size: 0.95em;
+      margin-left: 6px;
+      transition: background 0.2s;
+    }
+    .edit-btn:hover { background: #ff9800; }
+    .delete-btn:hover { background: #c62828; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <h2>Admin Panel</h2>
+    <div id="formSection">
+      <h2 id="formTitle">Add New Game</h2>
+      <input id="title" placeholder="Game Title">
+      <input id="slug" placeholder="Slug (ex: gta-san-andreas)">
+      <input id="image" placeholder="Image URL">
+      <input id="genre" placeholder="Genre">
+      <input id="size" placeholder="ISO Size">
+      <input id="releaseYear" placeholder="Release Year">
+      <textarea id="description" placeholder="Description"></textarea>
+      <input id="downloadLink" placeholder="Download Link">
+      <input id="youtube" placeholder="YouTube Video Embed URL">
+      <button onclick="saveGame()" id="saveBtn">Add Game</button>
+      <button onclick="resetForm()" id="cancelBtn" class="hidden">Cancel</button>
+    </div>
+    <div class="game-list-admin" id="gameListAdmin"></div>
+  </div>
+  <script>
+    let editIndex = null;
+    function getGames() {
+      return JSON.parse(localStorage.getItem('ps2games') || '[]');
+    }
+    function setGames(games) {
+      localStorage.setItem('ps2games', JSON.stringify(games));
+    }
+    function saveGame() {
+      const game = {
+        title: document.getElementById('title').value,
+        slug: document.getElementById('slug').value,
+        image: document.getElementById('image').value,
+        genre: document.getElementById('genre').value,
+        size: document.getElementById('size').value,
+        releaseYear: document.getElementById('releaseYear').value,
+        description: document.getElementById('description').value,
+        downloadLink: document.getElementById('downloadLink').value,
+        youtube: document.getElementById('youtube').value
+      };
+      let games = getGames();
+      if (editIndex !== null) {
+        games[editIndex] = game;
+        editIndex = null;
+        document.getElementById('formTitle').innerText = "Add New Game";
+        document.getElementById('saveBtn').innerText = "Add Game";
+        document.getElementById('cancelBtn').classList.add('hidden');
+      } else {
+        games.push(game);
+      }
+      setGames(games);
+      resetForm();
+      renderGameList();
+    }
+    function renderGameList() {
+      const games = getGames();
+      const list = document.getElementById('gameListAdmin');
+      list.innerHTML = '';
+      games.forEach((game, idx) => {
+        const div = document.createElement('div');
+        div.className = 'game-item';
+        div.innerHTML = `
+          <span class="game-item-title">${game.title}</span>
+          <button class="edit-btn" onclick="editGame(${idx})">Edit</button>
+          <button class="delete-btn" onclick="deleteGame(${idx})">Delete</button>
+        `;
+        list.appendChild(div);
+      });
+    }
+    function editGame(idx) {
+      const games = getGames();
+      const game = games[idx];
+      document.getElementById('title').value = game.title;
+      document.getElementById('slug').value = game.slug;
+      document.getElementById('image').value = game.image;
+      document.getElementById('genre').value = game.genre;
+      document.getElementById('size').value = game.size;
+      document.getElementById('releaseYear').value = game.releaseYear;
+      document.getElementById('description').value = game.description;
+      document.getElementById('downloadLink').value = game.downloadLink;
+      document.getElementById('youtube').value = game.youtube;
+      editIndex = idx;
+      document.getElementById('formTitle').innerText = "Edit Game";
+      document.getElementById('saveBtn').innerText = "Save Changes";
+      document.getElementById('cancelBtn').classList.remove('hidden');
+    }
+    function deleteGame(idx) {
+      if (!confirm('Delete this game?')) return;
+      let games = getGames();
+      games.splice(idx, 1);
+      setGames(games);
+      renderGameList();
+      resetForm();
+    }
+    function resetForm() {
+      document.getElementById('title').value = '';
+      document.getElementById('slug').value = '';
+      document.getElementById('image').value = '';
+      document.getElementById('genre').value = '';
+      document.getElementById('size').value = '';
+      document.getElementById('releaseYear').value = '';
+      document.getElementById('description').value = '';
+      document.getElementById('downloadLink').value = '';
+      document.getElementById('youtube').value = '';
+      editIndex = null;
+      document.getElementById('formTitle').innerText = "Add New Game";
+      document.getElementById('saveBtn').innerText = "Add Game";
+      document.getElementById('cancelBtn').classList.add('hidden');
+    }
+    // Expose functions globally for inline onclick
+    window.deleteGame = deleteGame;
+    window.editGame = editGame;
+    // Render list on load
+    renderGameList();
+  </script>
+</body>
+</html>
+
+<!-- Em ps2-games.html e render.js, você usaria localStorage para popular os cards -->
