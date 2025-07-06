@@ -1,6 +1,12 @@
 document.addEventListener('DOMContentLoaded', function () {
     const gameList = document.getElementById('gameList');
-    let games = JSON.parse(localStorage.getItem('ps2games') || '[]');
+    let games = [];
+
+    async function fetchGames() {
+        const res = await fetch('/api/games');
+        games = await res.json();
+        renderGames(games);
+    }
 
     function renderGames(gamesToRender) {
         gameList.innerHTML = '';
@@ -21,9 +27,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    renderGames(games);
+    // Initial fetch
+    fetchGames();
 
-    // Integrar com busca
+    // Integrate with search
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.addEventListener('input', function () {
