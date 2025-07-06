@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - PS2 Games</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Admin Panel</h1>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="ps2-games.html">PS2 Games</a></li>
+                <li><a href="admin.html">Admin</a></li>
+                <li id="logout-nav" style="display: none;"><button id="logout-btn">Logout</button></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <!-- Login Form -->
+        <div id="login-section">
+            <h2>Admin Login</h2>
+            <form id="login-form">
+                <label for="username">Username:</label>
+                <input type="text" id="username" required><br>
+                <label for="password">Password:</label>
+                <input type="password" id="password" required><br>
+                <button type="submit">Login</button>
+            </form>
+            <div id="login-error" style="color: red; display: none;"></div>
+        </div>
+
+        <!-- Admin Panel (hidden until logged in) -->
+        <div id="admin-panel" style="display: none;">
+            <h2>Add New Game</h2>
+            <form id="add-game-form">
+                <label for="add-title">Title:</label>
+                <input type="text" id="add-title" required><br>
+                <label for="add-genre">Genre:</label>
+                <input type="text" id="add-genre" required><br>
+                <label for="add-release-year">Release Year:</label>
+                <input type="text" id="add-release-year" required><br>
+                <label for="add-download-link">Download Link:</label>
+                <input type="url" id="add-download-link" required><br>
+                <label for="add-image-url">Image URL:</label>
+                <input type="url" id="add-image-url"><br>
+                <button type="submit">Add Game</button>
+            </form>
+
+            <h2>Edit Game</h2>
+            <form id="edit-game-form">
+                <label for="edit-id">Game ID:</label>
+                <input type="text" id="edit-id" required><br>
+                <label for="edit-title">Title:</label>
+                <input type="text" id="edit-title"><br>
+                <label for="edit-genre">Genre:</label>
+                <input type="text" id="edit-genre"><br>
+                <label for="edit-release-year">Release Year:</label>
+                <input type="text" id="edit-release-year"><br>
+                <label for="edit-download-link">Download Link:</label>
+                <input type="url" id="edit-download-link"><br>
+                <label for="edit-image-url">Image URL:</label>
+                <input type="url" id="edit-image-url"><br>
+                <button type="submit">Update Game</button>
+            </form>
+
+            <h2>Delete Game</h2>
+            <form id="delete-game-form">
+                <label for="delete-id">Game ID:</label>
+                <input type="text" id="delete-id" required><br>
+                <button type="submit">Delete Game</button>
+            </form>
+
+            <h2>Current Games</h2>
+            <div id="current-games-list">
+                <!-- Games will be loaded here by JavaScript -->
+            </div>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2025 PS2 Games</p>
+    </footer>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const loginSection = document.getElementById("login-section");
+            const adminPanel = document.getElementById("admin-panel");
+            const loginForm = document.getElementById("login-form");
+            const loginError = document.getElementById("login-error");
+            const logoutBtn = document.getElementById("logout-btn");
+            const logoutNav = document.getElementById("logout-nav");
+            
+            const addGameForm = document.getElementById("add-game-form");
+            const editGameForm = document.getElementById("edit-game-form");
+            const deleteGameForm = document.getElementById("delete-game-form");
+            const currentGamesListDiv = document.getElementById("current-games-list");
+
+            // Check authentication status on page load
+            checkAuthStatus();
+
+            function checkAuthStatus() {
+                fetch("/api/auth-status")
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.authenticated) {
+                            showAdminPanel();
+                        } else {
+                            showLoginForm();
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error checking auth status:", error);
+                        showLoginForm();
+                    });
+            }
+
+            function showLoginForm() {
+                loginSection.style.display = "block";
+                adminPanel.style.display = "none";
+                logoutNav.style.display = "none";
+            }
+
+            function showAdminPanel() {
+                loginSection.style.display = "none";
+                adminPanel.style.display = "block";
+                logoutNav.style.display = "block";
+                fetchGames();
+            }
+
+            // Login form handler
+            loginForm.addEventListener("submit", (e) => {
+                e.preventDefault();
+                const username = document.getElementById("username").value;
+                const password = document.getElementById("password").value;
+
+                fetch("/api/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ username, password })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAdminPanel();
+                        loginError.style.display = "none";
+                        loginForm.reset();
+                    } else {
+                        loginError.textContent = data.message;
+                        loginError.style.display = "block";
+                    }
+                })
+                .catch(error => {
+                    console.error("Login error:", error);
+                    loginError.textContent = "Login failed. Please try again.";
+                    loginError.style.display = "block";
+                });
+            });
+
+            // Logout handler
+            logoutBtn.addEventListener("click", () => {
+                fetch("/api/logout", {
+                    method: "POST"
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showLoginForm();
+                    }
+                })
+                .catch(error => console.error("Logout error:", error));
+            });
+
+            function fetchGames() {
+                fetch("/api/games")
+                    .then(response => response.json())
+                    .then(games => {
+                        currentGamesListDiv.innerHTML = "";
+                        games.forEach(game => {
+                            const gameDiv = document.createElement("div");
+                            gameDiv.classList.add("game-item");
+                            gameDiv.innerHTML = `
+                                ${game.image_url ? `<img src="${game.image_url}" alt="${game.title}" class="game-image">` : ''}
+                                <h3>${game.title} (ID: ${game.id})</h3>
+                                <p><strong>Genre:</strong> ${game.genre}</p>
+                                <p><strong>Release Year:</strong> ${game.release_year}</p>
+                                <p><a href="${game.download_link}" target="_blank">Download</a></p>
+                            `;
+                            currentGamesListDiv.appendChild(gameDiv);
+                        });
+                    })
+                    .catch(error => console.error("Error fetching games:", error));
+            }
+
+            function handleApiError(response) {
+                if (response.status === 401) {
+                    alert("Session expired. Please log in again.");
+                    showLoginForm();
+                    return false;
+                }
+                return true;
+            }
+
+            addGameForm.addEventListener("submit", (e) => {
+                e.preventDefault();
+                const newGame = {
+                    title: document.getElementById("add-title").value,
+                    genre: document.getElementById("add-genre").value,
+                    release_year: document.getElementById("add-release-year").value,
+                    download_link: document.getElementById("add-download-link").value,
+                    image_url: document.getElementById("add-image-url").value
+                };
+                fetch("/api/games", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(newGame)
+                })
+                .then(response => {
+                    if (!handleApiError(response)) return;
+                    return response.json();
+                })
+                .then(data => {
+                    if (data) {
+                        addGameForm.reset();
+                        fetchGames();
+                    }
+                })
+                .catch(error => console.error("Error adding game:", error));
+            });
+
+            editGameForm.addEventListener("submit", (e) => {
+                e.preventDefault();
+                const gameId = document.getElementById("edit-id").value;
+                const updatedGame = {};
+                if (document.getElementById("edit-title").value) updatedGame.title = document.getElementById("edit-title").value;
+                if (document.getElementById("edit-genre").value) updatedGame.genre = document.getElementById("edit-genre").value;
+                if (document.getElementById("edit-release-year").value) updatedGame.release_year = document.getElementById("edit-release-year").value;
+                if (document.getElementById("edit-download-link").value) updatedGame.download_link = document.getElementById("edit-download-link").value;
+                if (document.getElementById("edit-image-url").value) updatedGame.image_url = document.getElementById("edit-image-url").value;
+
+                fetch(`/api/games/${gameId}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(updatedGame)
+                })
+                .then(response => {
+                    if (!handleApiError(response)) return;
+                    if (response.ok) {
+                        editGameForm.reset();
+                        fetchGames();
+                    } else {
+                        alert("Game not found or error updating.");
+                    }
+                })
+                .catch(error => console.error("Error updating game:", error));
+            });
+
+            deleteGameForm.addEventListener("submit", (e) => {
+                e.preventDefault();
+                const gameId = document.getElementById("delete-id").value;
+                fetch(`/api/games/${gameId}`, {
+                    method: "DELETE"
+                })
+                .then(response => {
+                    if (!handleApiError(response)) return;
+                    if (response.ok) {
+                        deleteGameForm.reset();
+                        fetchGames();
+                    } else {
+                        alert("Game not found or error deleting.");
+                    }
+                })
+                .catch(error => console.error("Error deleting game:", error));
+            });
+        });
+    </script>
+</body>
+</html>
+
